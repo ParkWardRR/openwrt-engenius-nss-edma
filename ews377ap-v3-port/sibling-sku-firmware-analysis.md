@@ -68,6 +68,36 @@ only device that differs. It does include an `fdt@hk07` DTB as well.
 This needs hardware verification to determine which config the ECW230v3
 u-boot actually selects at boot.
 
+> **Update — do not read the FIT default as a hardware statement.** Evidence
+> from a sibling SKU ([ECW336-firmware-tools][ecw336], three units brought up
+> over UART): the **ECW336's FIT also defaults to `config@hk08`**, yet a live
+> ECW336 reports `machid=8010006` — i.e. **`ap-hk07`** — with
+> `soc_version_major=2`, `soc_version_minor=0`. Conversely a
+> **known-`ap-hk07`** EWS377-FIT 1.1.65 image defaults to `config@hk01.c4`.
+>
+> So `configurations/default` reflects whatever the vendor's QSDK build
+> happened to select, not the silicon. Userspace is no more reliable: the
+> ECW336 prints `Platform Name: ap-hk01-c6` while its own kernel reports
+> `AP-HK07`.
+>
+> **What actually decides it:** u-boot matches on **`machid`**, and the
+> embedded `flash.scr` gates on `machid` / `soc_hw_version`. The DTB's
+> `qcom,msm-id` is the board discriminator — hk07 = `0x156 0x185`,
+> hk08/hk06 = `0x158 0x188`.
+>
+> That turns the ECW230v3 question from "inspect the vendor image and guess"
+> into a **one-command check at the u-boot prompt** on a real unit:
+>
+> ```
+> printenv machid soc_version_major soc_version_minor
+> ```
+>
+> Pick `DEVICE_DTS_CONFIG` to match the board that `machid` reports, not the
+> label the vendor FIT defaults to. (Still unverified for ECW230v3 — no
+> ECW230v3 unit has been read here; only the *method* is settled.)
+
+[ecw336]: https://github.com/ParkWardRR/ECW336-firmware-tools
+
 ## Device tree comparison (fdt@hk07)
 
 ### Compatible strings
@@ -316,9 +346,13 @@ needs to be parameterized per-device, or separate artifact rules added.
 
 Before any code changes for ECW230v3 and EWS377-FIT:
 
-1. **ECW230v3 `config@hk07` vs `config@hk08`** — must determine which
-   config the ECW230v3 u-boot selects. Requires UART console access to
-   an ECW230v3 unit and a boot log capture.
+1. **ECW230v3 `config@hk07` vs `config@hk08`** — must determine the board
+   from a real unit. Still needs UART access to an ECW230v3, but the check
+   is now a single command, not a boot-log inference:
+   `printenv machid soc_version_major soc_version_minor` at the u-boot
+   prompt. **The vendor FIT's default config is not evidence** — a sibling
+   ECW336 defaults to `config@hk08` yet reports `machid=8010006`
+   (`ap-hk07`). See the update under "Default config" above.
 2. **Board data radio testing** — must verify both radios work correctly
    with the extracted board data on each physical unit.
 3. **Board data licensing** — extraction proves hardware works; shipping
