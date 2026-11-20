@@ -245,6 +245,30 @@ endif
 endef
 TARGET_DEVICES += engenius_ecw230v3
 
+define Device/engenius_ecw336
+	$(call Device/engenius_ap-hk07)
+	DEVICE_MODEL := ECW336
+	DEVICE_DTS := ipq8072-engenius-ecw336
+	# Wi-Fi 6E tri-band. The 6 GHz radio is a QCN9074 on the PCIe gen3
+	# controller, so this is the one model here that needs ath11k-pci.
+	# Board design is AP-HK01-C6; the stock DTB that matches this unit's
+	# silicon (msm-id 0x156/0x185, IPQ8072A) is the one QSDK names hk07, so
+	# that config name goes first. hk08 (the stock FIT's declared default)
+	# and hk01.c6 (the design's own name) are carried as cheap aliases in
+	# case the OEM u-boot asks for either.
+	DEVICE_DTS_CONFIG := config@hk07,config@hk08,config@hk01.c6
+	DEVICE_PACKAGES += kmod-ath11k-pci ath11k-firmware-qcn9074
+ifeq ($(IB),)
+ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
+	ARTIFACTS += senao-factory.bin
+	ARTIFACT/senao-factory.bin := append-image initramfs-uImage.itb | \
+		ubinize-kernel | qsdk-ipq-factory-nand | \
+		senao-header -r 0x0101 -p 0x0123 -t 2 -m 783c9ecf67b359ac
+endif
+endif
+endef
+TARGET_DEVICES += engenius_ecw336
+
 define Device/engenius_ews377-fit
 	$(call Device/engenius_ap-hk07)
 	DEVICE_MODEL := EWS377-FIT

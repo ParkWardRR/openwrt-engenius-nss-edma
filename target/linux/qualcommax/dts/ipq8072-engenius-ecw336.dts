@@ -1,0 +1,166 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR BSD-2-Clause
+/*
+ * EnGenius ECW336 — Wi-Fi 6E (AX8400) tri-band AP, product_id 0x0123 (291)
+ *
+ * Board design is QCA **AP-HK01-C6**, not AP-HK07. The DTB this unit boots
+ * is the one QSDK ships as fdt@hk07 (ECW336 firmware v1.8.118-12), and it is
+ * an hk01-c6 derivative: compatible = "qcom,ipq8074-ap-hk01-c6",
+ * "qcom,ipq8074-hk01"; only its model string was relabelled
+ * "IPQ8074/AP-HK07", which is why the kernel prints AP-HK07 over UART. What
+ * separates it from the sibling fdt@hk01.c6 is silicon, not wiring: it
+ * carries msm-id 0x156/0x185 (IPQ8072A) where hk01.c6 lists 0x143/0x186 and
+ * 0x158/0x188, and u-boot matches on that. It is also the variant whose
+ * switch config matches this product — one port (switch_lan_bmp = 0x20,
+ * switch_mac_mode1 = 0x0d) against hk01.c6's five (0x3e / 0xff).
+ *
+ * Shared with the EWS377AP v3 / ECW230v3 / EWS377-FIT, and the reason the
+ * dtsi below is reused: IPQ8072A, reset button on GPIO 52, parallel NAND
+ * 128k/2048 with ECC 4/512 and SMEM partitions, MDIO on GPIO 68/69, console
+ * on serial@78b3000. Those are Senao/EnGenius platform traits and are
+ * confirmed on this unit (UART, and /etc/factory.d/btn.cfg: BTN_GPIO="52").
+ * The Ethernet front end is NOT shared — see below.
+ *
+ * Two hardware differences from those three, both read out of the booted
+ * DTB and cross-checked against the stock rootfs:
+ *
+ *  1. Ethernet is a single 5 GbE port on ESS port 5 via uniphy1 in USXGMII
+ *     mode behind a Marvell AQR114C clause-45 PHY at MDIO address 8 — not
+ *     the QCA8081 2.5 GbE on port 6 / uniphy2 that the dual-band siblings
+ *     use (those values come from EnGenius' own OEM DTS, not from any QCA
+ *     RDP, so the reference-design name predicts nothing here). Cross-checked
+ *     against the stock rootfs: /etc/factory.d/board.cfg says ETH="AQR114C",
+ *     and the image ships aq-fw-download + an sn-ethphyfw package.
+ *  2. A QCN9074 6 GHz radio on the PCIe gen3 controller (pcie@20000000,
+ *     the only one enabled), PERST on GPIO 58 active-low. Stock console:
+ *     "remoteproc1: QCN9000_PCI0 is available".
+ *
+ * Deliberately NOT inherited from the siblings' dtsi: its MDIO
+ * reset-gpios = <&tlmm 43>. On this board GPIO 42/43 are muxed as blsp1_i2c,
+ * and the stock DTB declares no PHY reset line at all.
+ *
+ * LEDs: the dtsi's gpio-leds on GPIO 54/55/56 are deleted below, because
+ * they are not this board's LEDs — GPIO 54/55/56 appear nowhere in its DTB,
+ * and the LEDs are driven from the IPQ807x LEDC block instead
+ * (ledc@191e000, "qti,ledc", GPIO 18/19/20 = clk/data/clr, labels
+ * pwr_led/lan_led), for which there is no mainline driver. So this board
+ * boots with no LED indication at all. The Netgear WAX6xx approach
+ * (spi-gpio + gpio-74x164 over those pins) is the plausible substitute and
+ * is untested here.
+ *
+ * Other board pins seen in the stock DTB and not yet used: dc_det GPIO 64,
+ * 802.3at class detect GPIO 66, AQR PHY interrupt GPIO 67.
+ */
+
+#include "ipq8072-engenius-ap-hk07.dtsi"
+
+/ {
+	model = "EnGenius ECW336";
+	compatible = "engenius,ecw336", "qcom,ipq8074";
+
+	/* Not this board's LEDs: see the LED note above. */
+	/delete-node/ leds;
+};
+
+&{/aliases} {
+	/delete-property/ led-boot;
+	/delete-property/ led-failsafe;
+	/delete-property/ led-running;
+	/delete-property/ led-upgrade;
+};
+
+&mdio {
+	/* 42/43 are blsp1_i2c here, so the siblings' PHY reset must not fire. */
+	/delete-property/ reset-gpios;
+	/delete-node/ ethernet-phy@28;
+
+	aqr114c: ethernet-phy@8 {
+		compatible = "ethernet-phy-ieee802.3-c45";
+		reg = <8>;
+		nvmem-cells = <&aqr_fw>;
+		nvmem-cell-names = "firmware";
+	};
+};
+
+/* The 5 GbE port hangs off uniphy1, so the siblings' uniphy2 stays down. */
+&uniphy1 {
+	status = "okay";
+};
+
+&uniphy2 {
+	status = "disabled";
+};
+
+&switch {
+	ports {
+		/delete-node/ port@6;
+
+		swport5: port@5 {
+			reg = <5>;
+			label = "lan";
+			phy-handle = <&aqr114c>;
+			phy-mode = "usxgmii";
+			managed = "in-band-status";
+			pcs-handle = <&uniphy1 0>;
+			nvmem-cells = <&macaddr_ubootenv_ethaddr>;
+			nvmem-cell-names = "mac-address";
+		};
+	};
+};
+
+/*
+ * The AQR114C has no on-board flash of its own: its firmware lives in the
+ * 0:ETHPHYFW NAND partition (0xff80000, 512 KiB per u-boot smeminfo) behind
+ * a 40-byte QCOM MBN header, and u-boot does not load it on Linux's behalf.
+ * Same arrangement as the Linksys MX8500, which carries the same PHY; the
+ * cell length is taken from there and fits inside this smaller partition
+ * (0x28 + 0x60002 = 0x6002a < 0x80000). The .cld parser reads its own
+ * lengths out of the header, so a cell longer than the blob is harmless.
+ */
+&qpic_nand {
+	nand@0 {
+		partitions {
+			partition-0-ethphyfw {
+				label = "0:ethphyfw";
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					aqr_fw: firmware@28 {
+						/* skip the 40-byte QCOM MBN header */
+						reg = <0x28 0x60002>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&wifi {
+	qcom,ath11k-calibration-variant = "EnGenius-ECW336";
+};
+
+/* 6 GHz: QCN9074 on the gen3 controller. */
+&pcie_qmp0 {
+	status = "okay";
+};
+
+&pcie0 {
+	status = "okay";
+
+	perst-gpios = <&tlmm 58 GPIO_ACTIVE_LOW>;
+
+	pcie@0 {
+		wifi@0,0 {
+			status = "okay";
+
+			/* ath11k has no DT compatible for PCI cards */
+			compatible = "pci17cb,1104";
+			reg = <0x00010000 0 0 0 0>;
+
+			qcom,ath11k-calibration-variant = "EnGenius-ECW336";
+		};
+	};
+};

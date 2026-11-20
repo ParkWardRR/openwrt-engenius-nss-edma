@@ -14,6 +14,12 @@
 /feeds
 /feeds.conf
 /files
+# A global gitignore carrying Rust's "target/" (as ~/.gitignore_global does on
+# at least one machine here) shadows OpenWrt's target/ source tree. Already
+# tracked files are unaffected, but a NEW file under target/ is then silently
+# refused by git add -- which loses board-support files. Re-include the
+# directory; the more specific rule below still excludes the feeds symlinks.
+!/target/
 /target/linux/feeds
 /overlay
 /package/feeds
