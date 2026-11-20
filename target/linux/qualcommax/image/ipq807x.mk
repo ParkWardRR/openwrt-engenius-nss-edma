@@ -257,7 +257,8 @@ define Device/engenius_ecw336
 	# and hk01.c6 (the design's own name) are carried as cheap aliases in
 	# case the OEM u-boot asks for either.
 	DEVICE_DTS_CONFIG := config@hk07,config@hk08,config@hk01.c6
-	DEVICE_PACKAGES += kmod-ath11k-pci ath11k-firmware-qcn9074
+	DEVICE_PACKAGES += kmod-ath11k-pci ath11k-firmware-qcn9074 \
+		ipq-wifi-engenius_ecw336
 ifeq ($(IB),)
 ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
 	ARTIFACTS += senao-factory.bin

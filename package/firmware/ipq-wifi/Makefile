@@ -53,6 +53,7 @@ ALLWIFIBOARDS:= \
 	edgecore_eap102 \
 	edimax_cax1800 \
 	engenius_ecw230v3 \
+	engenius_ecw336 \
 	engenius_ews377ap-v3 \
 	engenius_ews377-fit \
 	elecom_wrc-x3000gs2 \
@@ -262,6 +263,7 @@ $(eval $(call generate-ipq-wifi-package,dynalink_dl-wrx36,Dynalink DL-WRX36))
 $(eval $(call generate-ipq-wifi-package,edgecore_eap102,Edgecore EAP102))
 $(eval $(call generate-ipq-wifi-package,edimax_cax1800,Edimax CAX1800))
 $(eval $(call generate-ipq-wifi-package,engenius_ecw230v3,EnGenius ECW230v3))
+$(eval $(call generate-ipq-wifi-package,engenius_ecw336,EnGenius ECW336))
 $(eval $(call generate-ipq-wifi-package,engenius_ews377ap-v3,EnGenius EWS377AP v3))
 $(eval $(call generate-ipq-wifi-package,engenius_ews377-fit,EnGenius EWS377-FIT))
 $(eval $(call generate-ipq-wifi-package,elecom_wrc-x3000gs2,ELECOM WRC-X3000GS2))
