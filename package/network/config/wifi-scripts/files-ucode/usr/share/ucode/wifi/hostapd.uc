@@ -67,14 +67,40 @@ function device_log_append(config) {
 	append('logger_stdout_level', config.log_level);
 }
 
-/* setup country code */
+/* setup country code
+ *
+ * A radio's own country wins; another radio's is only a fallback, so that a
+ * wifi-device with no country of its own still inherits one from a sibling.
+ * '00' (the world regulatory domain) is not a usable hostapd country_code and
+ * must never be inherited: `wifi detect` writes country '00' for a 6 GHz
+ * radio, and when that happened to be the last entry this loop walked, it
+ * became the country_code of EVERY phy on the device. hostapd then refused
+ * each config outright:
+ *
+ *   hostapd: Line 7: Invalid country_code '00'
+ *   hostapd: Cannot enable IEEE 802.11d without setting the country_code
+ *   hostapd: hostapd.add_iface failed for phy phy0 ifname=phy0-ap0
+ *
+ * i.e. one 6 GHz radio stopped a tri-band board from bringing up any BSS at
+ * all, on 2.4 and 5 GHz too. Seen on the EnGenius ECW336 (IPQ8072A + QCN9074),
+ * where it also looked like an ath11k regulatory failure, because
+ * "failed to process regulatory info -22" is logged by the same reload.
+ */
 function device_country_code(config) {
-	let status = global.ubus.call('network.wireless', 'status');
-	for (let name, radio in status) {
-		if (!radio.config.country)
-			continue;
-		config.country_code = radio.config.country;
+	let country = config.country;
+
+	if (!country || country == '00') {
+		let status = global.ubus.call('network.wireless', 'status');
+		for (let name, radio in status) {
+			let sibling = radio.config.country;
+			if (!sibling || sibling == '00')
+				continue;
+			country = sibling;
+		}
 	}
+
+	if (country && country != '00')
+		config.country_code = country;
 
 	if (!exists(config, 'country_code'))
 		return;
