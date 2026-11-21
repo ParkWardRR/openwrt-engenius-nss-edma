@@ -122,6 +122,9 @@ single-profile builds so each image ships only its own board data.
   self-hosting
 - [pelegrun-ap-hk07-firmware-tools](https://github.com/ParkWardRR/pelegrun-ap-hk07-firmware-tools) —
   no-brick cross-flash and recovery toolkit for the AP-HK07 SKUs
+- [engenius-ipq807x-openwrt](https://github.com/ParkWardRR/engenius-ipq807x-openwrt) —
+  the same EnGenius board support as a standalone **patch overlay** (no forked
+  tree), for review or upstreaming
 
 ## Acknowledgements
 
@@ -140,5 +143,5 @@ This tree stands on other people's work:
 
 ## License
 
-GPL-2.0, see [LICENSE](LICENSE). The NSS components keep their upstream
-licenses.
+GPL-2.0, see [COPYING](COPYING) and [LICENSES/](LICENSES). The NSS
+components keep their upstream licenses.
