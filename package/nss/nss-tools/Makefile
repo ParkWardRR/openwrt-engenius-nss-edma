@@ -104,12 +104,18 @@ define Package/nss-tools/install
 	# lines was selected, so this stays correct across that choice.
 	#
 	# Core 1 exists only on Hawkeye: nss-firmware installs qca-nss1-retail.bin
-	# under $(if $(filter HK,$(NSS_SOC))), so symlinking it unconditionally
-	# would dangle on ipq60xx - one NSS core, second image never requested.
+	# only when NSS_SOC is HK, so symlinking it unconditionally would dangle on
+	# ipq60xx - one NSS core there, and the second image is never requested.
+	#
+	# Do not write that condition as a dollar-if in a comment: make expands
+	# variable references in recipe lines even when the line starts with '#',
+	# so prose containing one is parsed as a real function call and the package
+	# dies with "insufficient number of arguments (1) to function 'if'".
 	$(INSTALL_DIR) $(1)/lib/firmware
 	$(LN) qca-nss0-retail.bin $(1)/lib/firmware/qca-nss0.bin
-	$(if $(CONFIG_TARGET_qualcommax_ipq807x),$(LN) qca-nss1-retail.bin \
-		$(1)/lib/firmware/qca-nss1.bin)
+ifeq ($(CONFIG_TARGET_qualcommax_ipq807x),y)
+	$(LN) qca-nss1-retail.bin $(1)/lib/firmware/qca-nss1.bin
+endif
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/nss-up $(1)/usr/sbin/nss-up
 	$(INSTALL_BIN) ./files/nss-status $(1)/usr/sbin/nss-status
