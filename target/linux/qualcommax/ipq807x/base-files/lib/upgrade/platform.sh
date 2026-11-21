@@ -180,6 +180,7 @@ platform_do_upgrade() {
 	dynalink,dl-wrx36|\
 	edimax,cax1800|\
 	engenius,ecw230v3|\
+	engenius,ecw336|\
 	engenius,ews377ap-v3|\
 	engenius,ews377-fit|\
 	netgear,rax120v2|\
