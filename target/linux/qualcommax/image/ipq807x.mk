@@ -265,7 +265,7 @@ define Device/engenius_ecw336
 	# stack"), so ship without it until the NSS plane is debugged here; the
 	# ath11k NSS patches stay compiled in and inert (nss_offload=0).
 	DEVICE_PACKAGES += kmod-ath11k-pci ath11k-firmware-qcn9074 \
-		ipq-wifi-engenius_ecw336 -nss-tools
+		ipq-wifi-engenius_ecw336 kmod-leds-ipq-ledc -nss-tools
 ifeq ($(IB),)
 ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
 	ARTIFACTS += senao-factory.bin

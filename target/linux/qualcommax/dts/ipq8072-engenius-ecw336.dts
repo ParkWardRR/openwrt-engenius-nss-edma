@@ -38,14 +38,10 @@
  * reset-gpios = <&tlmm 43>. On this board GPIO 42/43 are muxed as blsp1_i2c,
  * and the stock DTB declares no PHY reset line at all.
  *
- * LEDs: the dtsi's gpio-leds on GPIO 54/55/56 are deleted below, because
- * they are not this board's LEDs — GPIO 54/55/56 appear nowhere in its DTB,
- * and the LEDs are driven from the IPQ807x LEDC block instead
- * (ledc@191e000, "qti,ledc", GPIO 18/19/20 = clk/data/clr, labels
- * pwr_led/lan_led), for which there is no mainline driver. So this board
- * boots with no LED indication at all. The Netgear WAX6xx approach
- * (spi-gpio + gpio-74x164 over those pins) is the plausible substitute and
- * is untested here.
+ * LEDs: the dtsi's gpio-leds on GPIO 54/55/56 are deleted below — those are
+ * the siblings' LEDs and appear nowhere in this board's DTB. All five of this
+ * board's LEDs hang off the IPQ807x LEDC block (ledc@191e000, "qti,ledc",
+ * GPIO 18/19/20 = clk/data/clr), driven by kmod-leds-ipq-ledc.
  *
  * Other board pins seen in the stock DTB and not yet used: dc_det GPIO 64,
  * 802.3at class detect GPIO 66, AQR PHY interrupt GPIO 67.
@@ -57,15 +53,92 @@
 	model = "EnGenius ECW336";
 	compatible = "engenius,ecw336", "qcom,ipq8074";
 
-	/* Not this board's LEDs: see the LED note above. */
+	/* The dtsi's gpio-leds are the siblings' LEDs, not this board's. */
 	/delete-node/ leds;
 };
 
 &{/aliases} {
-	/delete-property/ led-boot;
-	/delete-property/ led-failsafe;
-	/delete-property/ led-running;
-	/delete-property/ led-upgrade;
+	led-boot = &led_pwr;
+	led-failsafe = &led_pwr;
+	led-running = &led_pwr;
+	led-upgrade = &led_pwr;
+};
+
+&tlmm {
+	ledc_pins: ledc-pins {
+		led_clk {
+			pins = "gpio18";
+			function = "led0";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		led_data {
+			pins = "gpio19";
+			function = "led1";
+			drive-strength = <8>;
+			bias-pull-down;
+		};
+
+		led_clr {
+			pins = "gpio20";
+			function = "led2";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+};
+
+/*
+ * All five LEDs hang off the IPQ807x LEDC block over a serial clk/data/clr
+ * interface, not off GPIOs. Every value here is the vendor's own, read out of
+ * the DTB the stock firmware boots (ledc@191e000): the twelve TCSR register
+ * values, the blink indices (which are the LEDs' bit positions in CG6, in the
+ * order power, lan, 2.4G, 5G, 6G) and the single LED-index/blink-source pair.
+ * Pin functions led0/led1/led2 on GPIO 18/19/20 exist in mainline's
+ * pinctrl-ipq8074, so the vendor's pinmux carries over unchanged.
+ */
+&soc {
+	ledc: ledc@191e000 {
+		compatible = "qti,ledc";
+		reg = <0x191e000 0x20070>;
+		reg-names = "ledc_base_addr";
+
+		qti,tcsr_ledc_values = <0x320193 0x0 0x0 0x0 0x0 0xffffffff
+					0xffff7fff 0xffffffff 0x7d0820 0x0
+					0x10482094 0x3ffffe1>;
+		qti,ledc_blink_indices_cnt = <5>;
+		qti,ledc_blink_indices = <0xf 0xe 0xd 0xc 0xb>;
+		qti,ledc_blink_idx_src_pair = <5 20>;
+
+		pinctrl-0 = <&ledc_pins>;
+		pinctrl-names = "default";
+
+		/*
+		 * Labels mirror the vendor's own LED names (pwr_led, lan_led,
+		 * wlan_{2g,5g,6g}_led); the physical colours are not recorded
+		 * anywhere in the firmware, so function/color are not claimed.
+		 */
+		led_pwr: led-0 {
+			label = "ecw336:pwr";
+		};
+
+		led_lan: led-1 {
+			label = "ecw336:lan";
+		};
+
+		led_wlan2g: led-2 {
+			label = "ecw336:wlan2g";
+		};
+
+		led_wlan5g: led-3 {
+			label = "ecw336:wlan5g";
+		};
+
+		led_wlan6g: led-4 {
+			label = "ecw336:wlan6g";
+		};
+	};
 };
 
 &mdio {
