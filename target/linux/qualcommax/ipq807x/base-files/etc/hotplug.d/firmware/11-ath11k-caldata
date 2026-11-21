@@ -27,6 +27,7 @@ case "$FIRMWARE" in
 	edgecore,eap102|\
 	edimax,cax1800|\
 	engenius,ecw230v3|\
+	engenius,ecw336|\
 	engenius,ews377ap-v3|\
 	engenius,ews377-fit|\
 	linksys,mx5300|\
@@ -170,6 +171,9 @@ case "$FIRMWARE" in
 "ath11k/QCN9074/hw1.0/cal-pci-0000:01:00.0.bin"|\
 "ath11k/QCN9074/hw1.0/cal-pci-0001:01:00.0.bin")
 	case "$board" in
+	engenius,ecw336)
+		caldata_extract "0:art" 0x26800 0x20000
+		;;
 	linksys,mx8500)
 		caldata_extract "0:art" 0x26800 0x20000
 		ath11k_remove_regdomain
