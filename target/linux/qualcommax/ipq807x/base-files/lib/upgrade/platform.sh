@@ -4,6 +4,26 @@ REQUIRE_IMAGE_METADATA=1
 RAMFS_COPY_BIN='fw_printenv fw_setenv head seq'
 RAMFS_COPY_DATA='/etc/fw_env.config /var/lock/fw_printenv.lock'
 
+engenius_ecw336_ubipart() {
+	# The ECW336 is an A/B board whose SMEM partition labels are ABSOLUTE:
+	# "rootfs" is always slot 0 (0x1000000) and "rootfs_1" always slot 1
+	# (0x87c0000), whichever slot u-boot booted. (The slot-relative mtdparts
+	# the OEM u-boot hands its own kernel is not used here -- the DT asks for
+	# the qcom,smem-part parser.) So the default CI_UBIPART of "rootfs" would
+	# make a sysupgrade from a slot-1 install overwrite the OTHER slot.
+	#
+	# Resolve it instead from the MTD that ubi0 is actually attached to, which
+	# is true by construction for whichever slot is running.
+	local mtdnum part
+
+	mtdnum="$(cat /sys/class/ubi/ubi0/mtd_num 2>/dev/null)"
+	if [ -n "$mtdnum" ]; then
+		part="$(sed -ne "s/^mtd${mtdnum}: [0-9a-f]* [0-9a-f]* \"\(.*\)\"$/\1/p" /proc/mtd)"
+	fi
+
+	echo "${part:-rootfs}"
+}
+
 xiaomi_initramfs_prepare() {
 	# Wipe UBI if running initramfs
 	[ "$(rootfs_type)" = "tmpfs" ] || return 0
@@ -179,8 +199,11 @@ platform_do_upgrade() {
 	compex,wpq873|\
 	dynalink,dl-wrx36|\
 	edimax,cax1800|\
+	engenius,ecw336)
+		CI_UBIPART="$(engenius_ecw336_ubipart)"
+		nand_do_upgrade "$1"
+		;;
 	engenius,ecw230v3|\
-	engenius,ecw336|\
 	engenius,ews377ap-v3|\
 	engenius,ews377-fit|\
 	netgear,rax120v2|\
