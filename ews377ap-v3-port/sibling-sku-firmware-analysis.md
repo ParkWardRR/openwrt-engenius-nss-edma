@@ -80,19 +80,29 @@ u-boot actually selects at boot.
 > vendor's QSDK build happened to select; nothing in a multi-board image
 > identifies the product.
 >
-> **What decides the DTB:** u-boot matches on **`machid`**, and the embedded
-> `flash.scr` gates on `machid` / `soc_hw_version`. `machid` is just the CDT
-> fields packed into four bytes, and u-boot prints the decode itself:
+> **What decides the DTB — and what decides the board are two different
+> questions.** u-boot matches on **`machid`** to pick a config **slot**, and the
+> embedded `flash.scr` gates on `machid` / `soc_hw_version`. But the slot's
+> *name* says nothing about the board, because **each vendor writes its own
+> board content into the slot its hardware matches.**
+>
+> The ECW336 is the clean demonstration. It boots the slot named **`hk07`**,
+> whose DTB even carries `model = "…IPQ8074/AP-HK07"` — and yet:
 >
 > ```
-> B - 515907 - CDT version:2, Platform ID:8, Major ID:1, Minor ID:0, Subtype:6
->              machid = 0x08 01 00 06
+> compatible = qcom,ipq8074-ap-hk01-c6, qcom,ipq8074-hk01, qcom,ipq8074
+> qcom,msm-id = 0x156 0x185
 > ```
 >
-> HK01 revision DTBs map **`C<N>` ↔ subtype N**, so subtype 6 selects
-> **`hk01.c6`** (`AP-HK01-C6`) — matching the `Platform Name: ap-hk01-c6` that
-> userspace prints. (`hk07` is SoC id pair `0x156 0x185`; `hk08`/`hk06` are
-> `0x158 0x188`.)
+> The board is **AP-HK01-C6** (an HK host plus a Pine/QCN9074 6 GHz card), not
+> hk07. Qualcomm's own `firmware_rdp_feature.ini`, shipped inside the ECW336's
+> wifi-firmware volume, confirms it: a section named
+> `#HK01-C6 - Pine RDPs : Pine6G + HK(2G+5G) in HK01 platform`, with board
+> entries for `ap-hk01-c6` and **no `ap-hk07` entry at all**.
+>
+> **So read the DTB's `compatible`** — never the slot name, never `model` (that
+> `AP-HK07` string appears in the EWS377-FIT's DTB too), never the FIT default.
+> `compatible` is what OpenWrt's `board_detect` consumes.
 >
 > **The catch that matters here: `machid` is a DTB selector, not a product ID.**
 > The observed **EWS377-FIT** reports the *same* `machid=8010006` as the ECW336,
@@ -103,16 +113,24 @@ u-boot actually selects at boot.
 >
 > | question | field |
 > |---|---|
-> | which DTB does u-boot select? | `machid` |
+> | which config **slot** does u-boot select? | `machid` |
+> | which **board** is in that slot? | the DTB's **`compatible`** |
 > | which product is this? | `hw_id`, and `product_id` in the image header |
 > | what peripherals exist? | inspect the unit |
 >
-> So the ECW230v3 check is still one command on a real unit —
+> So the ECW230v3 check is still cheap on a real unit —
 > `printenv machid hw_id soc_version_major soc_version_minor` — but read the
-> answer as "which DTB will boot", and expect the **same** value as the EWS377
-> units rather than something hk07/hk08-specific. Set `DEVICE_DTS_CONFIG` to the
-> config whose DTB matches hardware you actually verified, never to the vendor
-> FIT's default label.
+> answer as "which **slot** will boot", expect the **same** `machid` as the
+> EWS377 units, and then **dump that slot's DTB and read its `compatible`** to
+> learn the board. Set `DEVICE_DTS_CONFIG` to the config whose DTB matches
+> hardware you verified, never to the vendor FIT's default label.
+>
+> Practical consequence already measured: the ECW336's `hk07`-slot DTB differs
+> from the EWS377-FIT's by ~670 of 3347 lines — ethernet `dp4`+`dp5` vs
+> `dp5`+`dp6`, `ieee802.3-c45` refs for an Aquantia 10G PHY the EWS377 lacks,
+> ECW336-only `aqr_int`/`dc_det` GPIOs, a `wlan_6g_led`. Same slot, **not**
+> interchangeable board DTSs. NSS/EDMA work does carry across (same SoC, same
+> NSS clock tree); the board DTS does not.
 >
 > (Unverified for ECW230v3 — no ECW230v3 unit has been read here; only the
 > *method*, and the caveat about `machid` reuse, are established.)
