@@ -97,11 +97,19 @@ define Package/nss-tools/install
 	#   request_firmware failed with err code: -110
 	#   qca-nss 39000000.nss: probe with driver qca-nss failed with error -110
 	# so NSS never starts at all: no data plane for armed ports, and ath11k
-	# with nss_offload=1 registers against a core that is not there. Point the
-	# names the driver asks for at whichever line nss-firmware selected.
+	# with nss_offload=1 registers against a core that is not there.
+	#
+	# Point the names the driver asks for at qca-nss{0,1}-retail.bin, which are
+	# themselves nss-firmware's stable aliases for whichever of the 11.4 / 12.5
+	# lines was selected, so this stays correct across that choice.
+	#
+	# Core 1 exists only on Hawkeye: nss-firmware installs qca-nss1-retail.bin
+	# under $(if $(filter HK,$(NSS_SOC))), so symlinking it unconditionally
+	# would dangle on ipq60xx - one NSS core, second image never requested.
 	$(INSTALL_DIR) $(1)/lib/firmware
 	$(LN) qca-nss0-retail.bin $(1)/lib/firmware/qca-nss0.bin
-	$(LN) qca-nss1-retail.bin $(1)/lib/firmware/qca-nss1.bin
+	$(if $(CONFIG_TARGET_qualcommax_ipq807x),$(LN) qca-nss1-retail.bin \
+		$(1)/lib/firmware/qca-nss1.bin)
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/nss-up $(1)/usr/sbin/nss-up
 	$(INSTALL_BIN) ./files/nss-status $(1)/usr/sbin/nss-status
