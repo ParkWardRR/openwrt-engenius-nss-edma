@@ -87,6 +87,21 @@ define Build/Compile
 endef
 
 define Package/nss-tools/install
+	# qca-nss-drv hardcodes the firmware names it asks for -- nss_hal.c:
+	#   #define NSS_AP0_IMAGE "qca-nss0.bin"
+	#   #define NSS_AP1_IMAGE "qca-nss1.bin"
+	# while nss-firmware installs the selected line as qca-nss{0,1}-retail.bin.
+	# With the names drifted apart, firmware_request_nowarn() misses, the
+	# kernel falls back to the user-mode helper, and the core probe dies 60 s
+	# later with
+	#   request_firmware failed with err code: -110
+	#   qca-nss 39000000.nss: probe with driver qca-nss failed with error -110
+	# so NSS never starts at all: no data plane for armed ports, and ath11k
+	# with nss_offload=1 registers against a core that is not there. Point the
+	# names the driver asks for at whichever line nss-firmware selected.
+	$(INSTALL_DIR) $(1)/lib/firmware
+	$(LN) qca-nss0-retail.bin $(1)/lib/firmware/qca-nss0.bin
+	$(LN) qca-nss1-retail.bin $(1)/lib/firmware/qca-nss1.bin
 	$(INSTALL_DIR) $(1)/usr/sbin
 	$(INSTALL_BIN) ./files/nss-up $(1)/usr/sbin/nss-up
 	$(INSTALL_BIN) ./files/nss-status $(1)/usr/sbin/nss-status
