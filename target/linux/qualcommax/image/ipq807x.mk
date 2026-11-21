@@ -257,15 +257,8 @@ define Device/engenius_ecw336
 	# and hk01.c6 (the design's own name) are carried as cheap aliases in
 	# case the OEM u-boot asks for either.
 	DEVICE_DTS_CONFIG := config@hk07,config@hk08,config@hk01.c6
-	# -nss-tools: on this board, arming the NSS firmware data plane kills the
-	# network. Observed on hardware 2026-11-20: as soon as the port comes up
-	# under netifd, qca-ppe-nss moves "port 5 on NSS fw data plane (vsi 1)",
-	# the link reports 1Gbps/Full, and all traffic stops (100% ping loss).
-	# The service refuses to detach at runtime ("reboot to return to the host
-	# stack"), so ship without it until the NSS plane is debugged here; the
-	# ath11k NSS patches stay compiled in and inert (nss_offload=0).
 	DEVICE_PACKAGES += kmod-ath11k-pci ath11k-firmware-qcn9074 \
-		ipq-wifi-engenius_ecw336 kmod-leds-ipq-ledc -nss-tools
+		ipq-wifi-engenius_ecw336 kmod-leds-ipq-ledc
 ifeq ($(IB),)
 ifneq ($(CONFIG_TARGET_ROOTFS_INITRAMFS),)
 	ARTIFACTS += senao-factory.bin

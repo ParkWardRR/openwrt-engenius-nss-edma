@@ -1,0 +1,46 @@
+From: Orsavio P. Delmare <orsavio@delmare.lu>
+Subject: [PATCH] ath11k: make the nss members unconditional so NSS=n builds
+
+The NSS series does not compile with CPTCFG_ATH11K_NSS_SUPPORT off: core.h
+puts the nss members of struct ath11k_vif and struct ath11k behind the ifdef,
+while mac.c's AP_VLAN, WDS and dynamic-VLAN paths (patches 207/211/235/341)
+dereference arvif->nss unguarded in about ten places, so the build dies with
+
+  error: 'struct ath11k_vif' has no member named 'nss'   (x7)
+
+Drop the guards rather than add ten #ifdefs. struct ath11k_peer already
+carries its nss member unguarded, so this only makes the three consistent;
+the types come from nss.h, which core.h includes unconditionally and which
+defines them outside its own ifdef. Costs a few bytes per vif/pdev when NSS
+is compiled out.
+
+This has to be a late patch: editing 199-003 in place changes context that
+later patches in the series rely on (notably the one adding bss_peer inside
+the same ifdef), and they then fail to apply.
+
+--- a/drivers/net/wireless/ath/ath11k/core.h
++++ b/drivers/net/wireless/ath/ath11k/core.h
+@@ -458,9 +458,10 @@
+ 
+ 	struct ath11k_reg_tpc_power_info reg_tpc_info;
+ 	struct ath11k_mgmt_frame_stats mgmt_stats;
+-#ifdef CPTCFG_ATH11K_NSS_SUPPORT
++	/* Deliberately not under CPTCFG_ATH11K_NSS_SUPPORT: mac.c's AP_VLAN,
++	 * WDS and dynamic-VLAN paths dereference arvif->nss unguarded.
++	 */
+ 	struct arvif_nss nss;
+-#endif
+ 	struct list_head ap_vlan_arvifs;
+ 	/* list required by Dynamic VLAN during fw_recovery */
+ 	struct list_head dyn_vlan_cfg;
+@@ -736,10 +737,8 @@
+ 	struct ath11k_pdev *pdev;
+ 	struct ieee80211_hw *hw;
+ 	struct ath11k_pdev_wmi *wmi;
+-#ifdef CPTCFG_ATH11K_NSS_SUPPORT
+ 	struct ath11k_nss nss;
+ 	struct ath11k_peer *bss_peer;
+-#endif
+ 	struct ath11k_pdev_dp dp;
+ 	u8 mac_addr[ETH_ALEN];
+ 	struct ath11k_he ar_he;

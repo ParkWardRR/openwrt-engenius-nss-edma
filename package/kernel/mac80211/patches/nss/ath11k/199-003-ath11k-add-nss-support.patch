@@ -183,9 +183,9 @@ index 775904f..17f46cb 100644
  
  	struct ath11k_reg_tpc_power_info reg_tpc_info;
  	struct ath11k_mgmt_frame_stats mgmt_stats;
-+	/* unconditional: mac.c's AP_VLAN/WDS paths deref arvif->nss unguarded */
-+	/* (was #ifdef CPTCFG_ATH11K_NSS_SUPPORT) */
++#ifdef CPTCFG_ATH11K_NSS_SUPPORT
 +	struct arvif_nss nss;
++#endif
  	/* Must be last - ends in a flexible-array member.
  	 *
  	 * FIXME: Driver should not copy struct ieee80211_chanctx_conf,
@@ -203,9 +203,9 @@ index 775904f..17f46cb 100644
  	struct ath11k_pdev *pdev;
  	struct ieee80211_hw *hw;
  	struct ath11k_pdev_wmi *wmi;
-+	/* unconditional, to match struct ath11k_vif above */
-+	/* (was #ifdef CPTCFG_ATH11K_NSS_SUPPORT) */
++#ifdef CPTCFG_ATH11K_NSS_SUPPORT
 +	struct ath11k_nss nss;
++#endif
  	struct ath11k_pdev_dp dp;
  	u8 mac_addr[ETH_ALEN];
  	struct ath11k_he ar_he;
