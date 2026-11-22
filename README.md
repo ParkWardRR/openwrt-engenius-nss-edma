@@ -122,7 +122,7 @@ single-profile builds so each image ships only its own board data.
   self-hosting
 - [pelegrun-ap-hk07-firmware-tools](https://github.com/ParkWardRR/pelegrun-ap-hk07-firmware-tools) —
   no-brick cross-flash and recovery toolkit for the AP-HK07 SKUs
-- [engenius-ipq807x-openwrt](https://github.com/ParkWardRR/engenius-ipq807x-openwrt) —
+- [engenius-ap-openwrt](https://github.com/ParkWardRR/engenius-ap-openwrt) —
   the same EnGenius board support as a standalone **patch overlay** (no forked
   tree), for review or upstreaming
 
