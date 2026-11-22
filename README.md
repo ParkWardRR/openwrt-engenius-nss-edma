@@ -25,6 +25,22 @@ are published because they build from the same tree and share the platform
 plumbing — not because anyone has run them. Each release's notes carry a
 per-board verification table; read it before flashing.
 
+### Downloads
+
+Per-device releases, each carrying its own images, checksums and install notes:
+
+| Board | Release | Status |
+|---|---|---|
+| ECW336 (Wi-Fi 6E) | [`ecw336-v0.4.0`](https://github.com/ParkWardRR/openwrt-engenius-nss-edma/releases/tag/ecw336-v0.4.0) | hardware-verified |
+| EWS377AP v3 | [`ews377ap-v3-v0.4.0`](https://github.com/ParkWardRR/openwrt-engenius-nss-edma/releases/tag/ews377ap-v3-v0.4.0) | **UNTESTED** |
+| ECW230v3 | [`ecw230v3-v0.4.0`](https://github.com/ParkWardRR/openwrt-engenius-nss-edma/releases/tag/ecw230v3-v0.4.0) | **UNTESTED** |
+| EWS377-FIT | [`ews377-fit-v0.4.0`](https://github.com/ParkWardRR/openwrt-engenius-nss-edma/releases/tag/ews377-fit-v0.4.0) | **UNTESTED** |
+
+Each ships five images. **`…-initramfs-uImage.itb` boots from RAM over u-boot
+TFTP and writes nothing to flash** — that is the safe way to try an untested
+board. The combined build is
+[`v0.4.0-engenius-ipq807x`](https://github.com/ParkWardRR/openwrt-engenius-nss-edma/releases/tag/v0.4.0-engenius-ipq807x).
+
 ### Board identity: trust `compatible`, not the labels
 
 Worth knowing if you touch the DTS. These images select a device tree by the
