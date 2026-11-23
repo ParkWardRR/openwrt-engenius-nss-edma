@@ -66,20 +66,32 @@ FIT default. See
 
 ## Installing
 
-**Write the INACTIVE A/B slot and keep a UART adapter attached.** These units
-keep `rootfs` at `0x1000000` and `rootfs_1` at `0x87c0000`, selected by the
-u-boot env `active_fw`, so a bad image is undone by flipping one variable.
+**Write the INACTIVE A/B slot and keep a UART adapter attached.** The slot is
+selected by the u-boot env `active_fw` (`0` = FW1, `1` = FW2), so a bad image is
+undone by flipping one variable.
 
-Two cautions, both learned the hard way:
+Cautions, all learned the hard way:
 
 - **The bootloader env is append-only — never erase or rebuild it.** On the
   ECW336 the unit's only real MAC lives in the env (u-boot reports the ART copy
   invalid and falls back to a Qualcomm dummy), so `env default -a` is permanent
   identity loss. A *valid-but-incomplete* env is the one thing that hard-bricks
   these boards.
-- **ECW230v3: check `cat /proc/mtd` first.** Units have been observed with the
-  `rootfs` / `rootfs_1` labels **reversed**, so an installer assuming offsets
-  can overwrite the running slot. Resolve partitions by name, never by index.
+- **`rootfs` is not an offset — it means "the slot I am running from".** The
+  A/B labels are *slot-relative* and swap with `active_fw`: booted from FW1,
+  `rootfs` is `0x1000000` and `rootfs_1` is `0x87c0000`; booted from FW2 those
+  two names point the other way round. So `rootfs_1` is always the write target
+  and `rootfs` never is — but only if you read `/proc/mtd` **fresh**, on the
+  slot you are actually running. A remembered offset, or a capture from before
+  a slot switch, writes the live slot. (The "ECW230v3 labels are reversed"
+  reports were this same thing seen once: check, don't assume.)
+- `0:WIFIFW` is **per slot** too (FW1 `0x7ec0000`, FW2 `0xf680000`), so
+  restoring a slot to stock means writing both its rootfs *and* its wififw.
+- The env is **shared across slots**: a stock unit's `cloud_id=3` private-cloud
+  routing survived an OpenWrt excursion in the other slot and came back for
+  free — and anything else you change there persists after a rollback too.
+  Expect one failed controller check-in after such a rollback (the stock
+  overlay loses its negotiated secret, re-negotiates once, then goes steady).
 
 Treat `0:ART` as read-only — it holds factory calibration and MACs.
 
@@ -136,8 +148,10 @@ single-profile builds so each image ships only its own board data.
 - [engenius-field-guide](https://github.com/ParkWardRR/engenius-field-guide) —
   Senao/EnGenius firmware format, model codes, cross-flashing, controller
   self-hosting
-- [pelegrun-ap-hk07-firmware-tools](https://github.com/ParkWardRR/pelegrun-ap-hk07-firmware-tools) —
-  no-brick cross-flash and recovery toolkit for the AP-HK07 SKUs
+- [pelegrun](https://github.com/ParkWardRR/pelegrun-engenius-ews377-ecw230-firmware-tools) —
+  no-brick cross-flash and recovery toolkit for the AP-HK07 SKUs; it also reads
+  ECW336 images and envs, and refuses a re-head that would move an image across
+  the board boundary described above
 - [engenius-ap-openwrt](https://github.com/ParkWardRR/engenius-ap-openwrt) —
   the same EnGenius board support as a standalone **patch overlay** (no forked
   tree), for review or upstreaming
